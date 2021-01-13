@@ -6,9 +6,9 @@ import (
 
 //Context holds the connection context struct, cancel func and user value
 type Context struct {
-	ctx    context.Context
-	cancel context.CancelFunc
-	user   string
+	Ctx    context.Context
+	Cancel context.CancelFunc
+	User   string
 }
 
 //NewContext creates a new Context struct
