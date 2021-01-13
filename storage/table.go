@@ -2,6 +2,7 @@ package storage
 
 import (
 	"errors"
+	"sync"
 
 	"github.com/Mahamed-Belkheir/sunduq/context"
 )
@@ -53,6 +54,7 @@ type Table struct {
 	data          map[string][]byte
 	isSystemTable bool
 	name          string
+	mut           *sync.RWMutex
 }
 
 //NewTable creates a new Table instance
@@ -64,6 +66,7 @@ func NewTable(name, owner string, isSystemTable bool) Table {
 		make(map[string][]byte),
 		isSystemTable,
 		name,
+		&sync.RWMutex{},
 	}
 }
 
@@ -77,6 +80,8 @@ func notFound() error {
 
 //Add adds an element to the table
 func (t Table) Add(context context.Context, key string, value []byte) error {
+	t.mut.Lock()
+	defer t.mut.Unlock()
 	if !t.ac.canWrite(context.User) {
 		return invalidCreds()
 	}
@@ -88,6 +93,8 @@ func (t Table) Add(context context.Context, key string, value []byte) error {
 
 //Get fetches the item from the table
 func (t Table) Get(context context.Context, key string) ([]byte, error) {
+	t.mut.RLock()
+	defer t.mut.RUnlock()
 	if !t.ac.canRead(context.User) {
 		return nil, invalidCreds()
 	}
@@ -102,6 +109,8 @@ func (t Table) Get(context context.Context, key string) ([]byte, error) {
 
 //Del deletes the item from the table
 func (t Table) Del(context context.Context, key string) error {
+	t.mut.Lock()
+	defer t.mut.Unlock()
 	if !t.ac.canWrite(context.User) {
 		return invalidCreds()
 	}
@@ -113,6 +122,8 @@ func (t Table) Del(context context.Context, key string) error {
 
 //All fetches all data in the table
 func (t Table) All(context context.Context, key string) (map[string][]byte, error) {
+	t.mut.RLock()
+	defer t.mut.RUnlock()
 	if !t.ac.canRead(context.User) {
 		return nil, invalidCreds()
 	}
