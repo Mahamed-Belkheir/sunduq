@@ -4,7 +4,7 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/Mahamed-Belkheir/sunduq/context"
+	"github.com/Mahamed-Belkheir/sunduq"
 )
 
 //AccessLevel is the base enum type for access lists
@@ -79,10 +79,10 @@ func notFound() error {
 }
 
 //Add adds an element to the table
-func (t Table) Add(context context.Context, key string, value []byte) error {
+func (t Table) Add(req sunduq.Request, key string, value []byte) error {
 	t.mut.Lock()
 	defer t.mut.Unlock()
-	if !t.ac.canWrite(context.User) {
+	if !t.ac.canWrite(req.User) {
 		return invalidCreds()
 	}
 
@@ -92,10 +92,10 @@ func (t Table) Add(context context.Context, key string, value []byte) error {
 }
 
 //Get fetches the item from the table
-func (t Table) Get(context context.Context, key string) ([]byte, error) {
+func (t Table) Get(req sunduq.Request, key string) ([]byte, error) {
 	t.mut.RLock()
 	defer t.mut.RUnlock()
-	if !t.ac.canRead(context.User) {
+	if !t.ac.canRead(req.User) {
 		return nil, invalidCreds()
 	}
 
@@ -108,10 +108,10 @@ func (t Table) Get(context context.Context, key string) ([]byte, error) {
 }
 
 //Del deletes the item from the table
-func (t Table) Del(context context.Context, key string) error {
+func (t Table) Del(req sunduq.Request, key string) error {
 	t.mut.Lock()
 	defer t.mut.Unlock()
-	if !t.ac.canWrite(context.User) {
+	if !t.ac.canWrite(req.User) {
 		return invalidCreds()
 	}
 
@@ -121,10 +121,10 @@ func (t Table) Del(context context.Context, key string) error {
 }
 
 //All fetches all data in the table
-func (t Table) All(context context.Context, key string) (map[string][]byte, error) {
+func (t Table) All(req sunduq.Request, key string) (map[string][]byte, error) {
 	t.mut.RLock()
 	defer t.mut.RUnlock()
-	if !t.ac.canRead(context.User) {
+	if !t.ac.canRead(req.User) {
 		return nil, invalidCreds()
 	}
 

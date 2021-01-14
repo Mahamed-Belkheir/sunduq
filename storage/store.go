@@ -4,7 +4,7 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/Mahamed-Belkheir/sunduq/context"
+	"github.com/Mahamed-Belkheir/sunduq"
 )
 
 func tableExists() error {
@@ -22,24 +22,24 @@ type Storage struct {
 }
 
 //Add adds data to a specific table
-func (s Storage) Add(ctx context.Context, tableName, key string, value []byte) error {
+func (s Storage) Add(req sunduq.Request, tableName, key string, value []byte) error {
 	defer s.mut.RUnlock()
 	s.mut.RLock()
 	table, ok := s.tables[tableName]
 	if !ok {
 		return tableNotFound()
 	}
-	return table.Add(ctx, key, value)
+	return table.Add(req, key, value)
 }
 
 //AddTable creates and adds a new table to the storage struct
-func (s Storage) AddTable(ctx context.Context, tableName string, isSystemTable bool) error {
+func (s Storage) AddTable(req sunduq.Request, tableName string, isSystemTable bool) error {
 	defer s.mut.Unlock()
 	s.mut.Lock()
 	_, ok := s.tables[tableName]
 	if ok {
 		return tableExists()
 	}
-	s.tables[tableName] = NewTable(tableName, ctx.User, isSystemTable)
+	s.tables[tableName] = NewTable(tableName, req.User, isSystemTable)
 	return nil
 }
