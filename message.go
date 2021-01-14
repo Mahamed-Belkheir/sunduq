@@ -104,7 +104,7 @@ type Message interface {
 
 //Handler is a generic connection handler interface, is supposed to manage handling sending and recieving messages from connections
 type Handler interface {
-	Recieve(interface{}) Message
+	Recieve() chan Message
 	Send(Message)
 	Run()
 }
