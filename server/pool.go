@@ -11,7 +11,7 @@ type Pool struct {
 	close   chan bool
 }
 
-//NewPool creates a new pool instance, initalization its channels
+//NewPool creates a new pool instance, initalizating its channels
 func NewPool(workerLimit, queueLimit int) Pool {
 	return Pool{
 		make(chan chan sunduq.Handler, workerLimit),
