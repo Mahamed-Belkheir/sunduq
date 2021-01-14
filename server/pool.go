@@ -25,16 +25,18 @@ func (p Pool) Init() {
 	for i := 0; i < cap(p.workers); i++ {
 		NewWorker(p.workers)
 	}
-	for {
-		select {
-		case <-p.close:
-			return
+	go func() {
+		for {
+			select {
+			case <-p.close:
+				return
 
-		case job := <-p.queue:
-			worker := <-p.workers
-			worker <- job
+			case job := <-p.queue:
+				worker := <-p.workers
+				worker <- job
+			}
 		}
-	}
+	}()
 }
 
 //NewWorker creates a new worker goroutine and adds it to the worker queue
