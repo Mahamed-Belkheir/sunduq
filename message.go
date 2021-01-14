@@ -36,6 +36,22 @@ const (
 	AllTableUser
 )
 
+//DataType the stored value type
+type DataType uint8
+
+const (
+	//Boolean ...
+	Boolean DataType = iota
+	//String ...
+	String
+	//Integer ...
+	Integer
+	//Float ...
+	Float
+	//JSON ...
+	JSON
+)
+
 /*
 Message Formats
 
@@ -108,3 +124,38 @@ type Handler interface {
 	Send(Message)
 	Run()
 }
+
+type BaseMessage struct {
+	mType MessageType
+}
+
+func (b BaseMessage) Type() MessageType {
+	return b.mType
+}
+
+type PingMessage struct {
+	BaseMessage
+}
+
+type ResponseMessage struct {
+	BaseMessage
+	IsError     bool
+	MessageText string
+}
+
+type ResultMessage struct {
+	BaseMessage
+	RequestId  uint32
+	ResultType DataType
+	Result     []byte
+}
+
+type ConnectMessage struct {
+	BaseMessage
+	Username string
+	Password string
+}
+
+// func MessageFromBytes() Message {
+
+// }

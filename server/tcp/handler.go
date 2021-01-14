@@ -27,14 +27,16 @@ func (h Handler) Send(msg sunduq.Message) {
 func (h Handler) Run() {
 	go func() {
 		for {
-			// msg <- h.sendQueue
+			// msg, ok <- h.sendQueue
+			// if !ok { return }
 			// h.conn.Write()
 		}
 	}()
 	go func() {
 		for {
 			// h.conn.Read()
-			// h.recieveQueue <- msg
+			// ok := h.recieveQueue <- msg
+			// if !ok { return }
 		}
 	}()
 }
