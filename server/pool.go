@@ -8,7 +8,6 @@ import (
 type Pool struct {
 	workers chan chan sunduq.Handler
 	queue   chan sunduq.Handler
-	close   chan bool
 }
 
 //NewPool creates a new pool instance, initalizating its channels
@@ -16,7 +15,6 @@ func NewPool(workerLimit, queueLimit int) Pool {
 	return Pool{
 		make(chan chan sunduq.Handler, workerLimit),
 		make(chan sunduq.Handler, queueLimit),
-		make(chan bool),
 	}
 }
 
@@ -27,14 +25,12 @@ func (p Pool) Init() {
 	}
 	go func() {
 		for {
-			select {
-			case <-p.close:
+			job, ok := <-p.queue
+			if !ok {
 				return
-
-			case job := <-p.queue:
-				worker := <-p.workers
-				worker <- job
 			}
+			worker := <-p.workers
+			worker <- job
 		}
 	}()
 }
@@ -58,7 +54,6 @@ func NewWorker(workerQueue chan chan sunduq.Handler) {
 //Close closes the pool and shuts down all workers
 func (p Pool) Close() {
 	close(p.queue)
-	p.close <- true
 
 	for i := 0; i < cap(p.workers); i++ {
 		worker := <-p.workers
