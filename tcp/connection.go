@@ -2,6 +2,7 @@ package tcp
 
 import (
 	"bufio"
+	"errors"
 	"io"
 	"net"
 
@@ -13,6 +14,21 @@ type Connection struct {
 	conn         net.Conn
 	sendQueue    chan sunduq.Message
 	recieveQueue chan sunduq.Message
+	errorQueue   chan error
+	close        chan bool
+	running      bool
+}
+
+//NewConnection wraps the tcp connection with the Connection abstraction struct
+func NewConnection(conn net.Conn) Connection {
+	return Connection{
+		conn,
+		make(chan sunduq.Message),
+		make(chan sunduq.Message),
+		make(chan error),
+		make(chan bool),
+		false,
+	}
 }
 
 //Recieve returns the recieved messages queue
@@ -25,8 +41,25 @@ func (h Connection) Send(msg sunduq.Message) {
 	h.sendQueue <- msg
 }
 
+//Errors returns the errors channel, errors recieved while the connection is processing messages
+func (h Connection) Errors() chan error {
+	return h.errorQueue
+}
+
+//Close closes the connection and ends all associated tasks
+func (h Connection) Close() {
+	h.conn.Close()
+	close(h.sendQueue)
+	h.close <- true
+	close(h.close)
+}
+
 //Run runs the Connection to listen for new messages to recieve and send
-func (h Connection) Run() {
+func (h Connection) Run() error {
+	if h.running {
+		return errors.New("connection is already running")
+	}
+	h.running = true
 	go func() {
 		for {
 			msg, ok := <-h.sendQueue
@@ -40,13 +73,22 @@ func (h Connection) Run() {
 	go func() {
 		buf := bufio.NewReader(h.conn)
 		auth, err := sunduq.MessageFromBytes(buf)
-		_ = err
+		if err != nil {
+			h.errorQueue <- err
+		}
 		// authorize
 		_ = auth
 		for {
-			msg, err := sunduq.MessageFromBytes(buf)
-			_ = err
-			h.recieveQueue <- msg
+			select {
+			case <-h.close:
+				close(h.recieveQueue)
+				return
+			default:
+				msg, err := sunduq.MessageFromBytes(buf)
+				_ = err
+				h.recieveQueue <- msg
+			}
 		}
 	}()
+	return nil
 }
