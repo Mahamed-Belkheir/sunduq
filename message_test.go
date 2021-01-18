@@ -6,37 +6,36 @@ import (
 	"testing"
 )
 
-func TestPingSerialize(t *testing.T) {
-	ping := NewPing(2)
-	buf := ping.ToBytesBuffer()
-	reader := bufio.NewReader(&buf)
-	rePing, err := MessageFromBytes(reader)
-	if err != nil {
-		t.Errorf("ping deserialization failed with error %v", err)
-	}
-
-	if !reflect.DeepEqual(ping, rePing) {
-		t.Errorf("serialized ping did not equal original ping message, \n ping: %v \n reping: %v", ping, rePing)
+func assert(expected, got interface{}, t *testing.T) {
+	if !reflect.DeepEqual(expected, got) {
+		t.Errorf("expected: %v \n got: %v", expected, got)
 	}
 }
 
-func TestResultSerialize(t *testing.T) {
-	message := "task failed successfully"
-	res := NewResult(1, true, String, []byte(message))
-	buf := res.ToBytesBuffer()
+func serializeAndTest(msg Message, t *testing.T) Message {
+	buf := msg.ToBytesBuffer()
 	reader := bufio.NewReader(&buf)
-	reRes, err := MessageFromBytes(reader)
-
+	msg2, err := MessageFromBytes(reader)
 	if err != nil {
-		t.Errorf("result deserialization failed with error %v", err)
+		t.Errorf("failed to deserialize the message with error: %v", err)
 	}
+	assert(msg, msg2, t)
+	return msg2
+}
 
-	if !reflect.DeepEqual(res, reRes) {
-		t.Errorf("serialized result did not equal original result message, \n res: %v \n reRes: %v", res, reRes)
-	}
+func TestPingSerialize(t *testing.T) {
+	ping := NewPing(2)
 
-	if message != string(reRes.Value) {
-		t.Errorf("serialized message did not match the original, \n expected: %v \n got: %v", message, string(reRes.Value))
+	serializeAndTest(ping, t)
+}
+
+func TestResultSerialize(t *testing.T) {
+	text := "task failed successfully"
+	message := NewResult(1, true, String, []byte(text))
+	message2 := serializeAndTest(message, t)
+
+	if text != string(message2.Value) {
+		t.Errorf("serialized message did not match the original, \n expected: %v \n got: %v", message, string(message2.Value))
 	}
 }
 
@@ -44,16 +43,8 @@ func TestConnectMessage(t *testing.T) {
 	username := "bob123"
 	password := "securepassword3000"
 	con := NewConnect(username, password)
-	buf := con.ToBytesBuffer()
-	reader := bufio.NewReader(&buf)
-	reCon, err := MessageFromBytes(reader)
+	con2 := serializeAndTest(con, t)
 
-	if err != nil {
-		t.Errorf("failed to parse message with error: %v", err)
-	}
-
-	if !reflect.DeepEqual(con, reCon) {
-		t.Errorf("original message did not match parsed message \n original: %v \n parsed: %v", con, reCon)
-	}
-
+	assert(username, con2.Key, t)
+	assert(password, string(con2.Value), t)
 }
