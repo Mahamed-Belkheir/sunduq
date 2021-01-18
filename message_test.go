@@ -1,18 +1,16 @@
-package tests
+package sunduq
 
 import (
 	"bufio"
 	"reflect"
 	"testing"
-
-	"github.com/Mahamed-Belkheir/sunduq"
 )
 
 func TestPingSerialize(t *testing.T) {
-	ping := sunduq.NewPing(2)
+	ping := NewPing(2)
 	buf := ping.ToBytesBuffer()
 	reader := bufio.NewReader(&buf)
-	rePing, err := sunduq.MessageFromBytes(reader)
+	rePing, err := MessageFromBytes(reader)
 	if err != nil {
 		t.Errorf("ping deserialization failed with error %v", err)
 	}
@@ -24,10 +22,10 @@ func TestPingSerialize(t *testing.T) {
 
 func TestResultSerialize(t *testing.T) {
 	message := "task failed successfully"
-	res := sunduq.NewResult(1, true, sunduq.String, []byte(message))
+	res := NewResult(1, true, String, []byte(message))
 	buf := res.ToBytesBuffer()
 	reader := bufio.NewReader(&buf)
-	reRes, err := sunduq.MessageFromBytes(reader)
+	reRes, err := MessageFromBytes(reader)
 
 	if err != nil {
 		t.Errorf("result deserialization failed with error %v", err)
@@ -45,10 +43,10 @@ func TestResultSerialize(t *testing.T) {
 func TestConnectMessage(t *testing.T) {
 	username := "bob123"
 	password := "securepassword3000"
-	con := sunduq.NewConnect(username, password)
+	con := NewConnect(username, password)
 	buf := con.ToBytesBuffer()
 	reader := bufio.NewReader(&buf)
-	reCon, err := sunduq.MessageFromBytes(reader)
+	reCon, err := MessageFromBytes(reader)
 
 	if err != nil {
 		t.Errorf("failed to parse message with error: %v", err)
