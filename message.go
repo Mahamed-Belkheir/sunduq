@@ -1,14 +1,21 @@
 package sunduq
 
+import (
+	"bufio"
+	"bytes"
+	"encoding/binary"
+	"fmt"
+
+	"github.com/pkg/errors"
+)
+
 //MessageType defines the message's type
 type MessageType uint8
 
 const (
 	//Ping network test message
 	Ping MessageType = iota
-	//Response response to a nonquery reque
-	Response
-	//Result response to a query
+	//Result response to a message
 	Result
 	//Connect Establish a Connection
 	Connect
@@ -36,12 +43,12 @@ const (
 	AllTableUser
 )
 
-//DataType the stored value type
-type DataType uint8
+//ValueType the stored value type
+type ValueType uint8
 
 const (
 	//Boolean ...
-	Boolean DataType = iota
+	Boolean ValueType = iota
 	//String ...
 	String
 	//Integer ...
@@ -53,109 +60,213 @@ const (
 )
 
 /*
-Message Formats
+			  Message Format:
 
-Ping
+byte length:				purpose:
 
-1 : 0 // message start
-1 : Ping // MessageType
-1 : 0 // message end
-
-Response
-
-1 : 0 // message start
-1 : Response // MessageType
-1 : 0/1 // 0 = OK / 1 = ERROR, if OK ends here
-4 : message length
-message length: message
-1 : 0 // message end
-
-
-Result
-
-1 : 0 // message start
-1 : Result // MessageType
-4 : // request Id
-1 : // ResultType
-4 : // result length
-result length: // result
-1 : 0 // message end
-
-
-Connect
-
-1 : 0 // message start
-1 : Connect // MessageType
-1 : // username length
-username length: // username
-1 : // password length
-password length // password
-1 : 0 // message end
-
-
-Disconnect
-
-1 : 0 // message start
-1 : Disconnect // MessageType
-1 : 0 // message end
-
-Queries
-
-1 : 0 // message start
-1 : // MessageType
-4 : // request Id
-1 : // result type
-4 : // data length
-data length: // data
-1 : 0 // message end
-
-
-
+1			 		: 		MessageType
+1			 		: 		Error (0/1)
+2			 		: 		request id
+1 		     		: 		table length
+table length 		: 		table name
+1					:		key length
+key length			:		key
+1                   :       ValueType
+4					:		value length
+value length		:		value
 */
 
 //Message is the base message type that all messages share
-type Message interface {
-	Type() MessageType
+type Message struct {
+	Type      MessageType
+	Error     bool
+	ID        uint16
+	Table     string
+	Key       string
+	ValueType ValueType
+	Value     []byte
 }
 
-//Handler is a generic connection handler interface, is supposed to manage handling sending and recieving messages from connections
-type Handler interface {
-	Recieve() chan Message
-	Send(Message)
-	Run()
+//NewPing creates a new Ping message
+func NewPing(id uint16) Message {
+	return Message{
+		Type:  Ping,
+		Error: false,
+		ID:    id,
+		Value: make([]byte, 0),
+	}
 }
 
-type BaseMessage struct {
-	mType MessageType
+//NewResult creates a new Result message
+func NewResult(id uint16, err bool, valueType ValueType, value []byte) Message {
+	return Message{
+		Type:      Result,
+		Error:     err,
+		ID:        id,
+		ValueType: valueType,
+		Value:     value,
+	}
 }
 
-func (b BaseMessage) Type() MessageType {
-	return b.mType
+//NewConnect creates a new Connect request message
+func NewConnect(username, password string) Message {
+	return Message{
+		Type:      Connect,
+		Error:     false,
+		ValueType: String,
+		Key:       username,
+		Value:     []byte(password),
+	}
 }
 
-type PingMessage struct {
-	BaseMessage
+//NewDisconnect creates a new disconnect request message
+func NewDisconnect() Message {
+	return Message{
+		Type:  Disconnect,
+		Error: false,
+		Value: make([]byte, 0),
+	}
 }
 
-type ResponseMessage struct {
-	BaseMessage
-	IsError     bool
-	MessageText string
+//NewMessage creates a new value-less message, for queries
+func NewMessage(mType MessageType, id uint16, key, table string) Message {
+	return Message{
+		Type:  mType,
+		Error: false,
+		ID:    id,
+		Key:   key,
+		Table: table,
+		Value: make([]byte, 0),
+	}
 }
 
-type ResultMessage struct {
-	BaseMessage
-	RequestId  uint32
-	ResultType DataType
-	Result     []byte
+//NewMessageWithValue creates a message with a value, for set commands
+func NewMessageWithValue(mType MessageType, id uint16, key, table string, valueType ValueType, value []byte) Message {
+	return Message{
+		Type:      mType,
+		Error:     false,
+		ID:        id,
+		Key:       key,
+		Table:     table,
+		ValueType: valueType,
+		Value:     value,
+	}
 }
 
-type ConnectMessage struct {
-	BaseMessage
-	Username string
-	Password string
+//ToBytesBuffer serializes the message into bytes inside of a buffer to be transported over the network
+func (m Message) ToBytesBuffer() bytes.Buffer {
+	var buf bytes.Buffer
+
+	buf.WriteByte(byte(m.Type))
+
+	if m.Error {
+		buf.WriteByte(1)
+	} else {
+		buf.WriteByte(0)
+	}
+
+	// if m.ID > 65535 {
+	// 	return buf, errors.New("ID must be an int16 within 0 and 65535")
+	// }
+	id := make([]byte, 2)
+	binary.LittleEndian.PutUint16(id, m.ID)
+	buf.Write(id)
+
+	tLen := len(m.Table)
+	// if tLen > 255 {
+	// 	return buf, errors.New("table name can not be longer than 255 characters")
+	// }
+	buf.WriteByte(byte(tLen))
+
+	buf.Write([]byte(m.Table))
+
+	kLen := len(m.Key)
+	// if kLen > 255 {
+	// 	return buf, errors.New("key name can not be longer than 255 characters")
+	// }
+	buf.WriteByte(byte(kLen))
+
+	buf.Write([]byte(m.Key))
+
+	buf.WriteByte(byte(m.ValueType))
+
+	dataLen := make([]byte, 4)
+	// if len(m.Value) > 4294967295 {
+	// 	return buf, errors.New("value size must be within 4MB")
+	// }
+	binary.LittleEndian.PutUint32(dataLen, uint32(len(m.Value)))
+
+	buf.Write(m.Value)
+
+	return buf
 }
 
-// func MessageFromBytes() Message {
+//MessageFromBytes reads the buffer for a valid message encoding
+func MessageFromBytes(buf *bufio.Reader) (Message, error) {
+	msg := Message{}
 
-// }
+	typeByte, err := buf.ReadByte()
+	if err != nil {
+		return msg, errors.Wrap(err, "unable to read message type")
+	}
+	msg.Type = MessageType(typeByte)
+
+	errorByte, err := buf.ReadByte()
+	if err != nil {
+		return msg, errors.Wrap(err, "unable to read message status")
+	}
+	if errorByte == 0 {
+		msg.Error = false
+	} else if errorByte == 1 {
+		msg.Error = true
+	} else {
+		return msg, fmt.Errorf("invalid value: %v, for message status", errorByte)
+	}
+
+	idBytes := make([]byte, 2)
+	_, err = buf.Read(idBytes)
+	if err != nil {
+		return msg, errors.Wrap(err, "unable to read message id")
+	}
+	msg.ID = binary.LittleEndian.Uint16(idBytes)
+
+	tableLen, err := buf.ReadByte()
+	if err != nil {
+		return msg, errors.Wrap(err, "unable to read message table length")
+	}
+	tableName := make([]byte, tableLen)
+	_, err = buf.Read(tableName)
+	if err != nil {
+		return msg, errors.Wrap(err, "unable to read table name")
+	}
+	msg.Table = string(tableName)
+
+	keyLen, err := buf.ReadByte()
+	if err != nil {
+		return msg, errors.Wrap(err, "unable to read message key length")
+	}
+	key := make([]byte, keyLen)
+	_, err = buf.Read(key)
+	if err != nil {
+		return msg, errors.Wrap(err, "unable to read message key")
+	}
+	msg.Key = string(key)
+
+	valueType, err := buf.ReadByte()
+	if err != nil {
+		return msg, errors.Wrap(err, "unable to read message value type")
+	}
+	msg.ValueType = ValueType(valueType)
+
+	valueLenBytes := make([]byte, 4)
+	_, err = buf.Read(valueLenBytes)
+	if err != nil {
+		return msg, errors.Wrap(err, "unable to message value length")
+	}
+	valueLen := binary.LittleEndian.Uint32(valueLenBytes)
+	value := make([]byte, valueLen)
+	buf.Read(value)
+	msg.Value = value
+
+	return msg, nil
+}
