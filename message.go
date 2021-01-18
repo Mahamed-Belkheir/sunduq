@@ -93,7 +93,6 @@ func NewPing(id uint16) Message {
 		Type:  Ping,
 		Error: false,
 		ID:    id,
-		Value: make([]byte, 0),
 	}
 }
 
@@ -124,7 +123,6 @@ func NewDisconnect() Message {
 	return Message{
 		Type:  Disconnect,
 		Error: false,
-		Value: make([]byte, 0),
 	}
 }
 
@@ -136,7 +134,6 @@ func NewMessage(mType MessageType, id uint16, key, table string) Message {
 		ID:    id,
 		Key:   key,
 		Table: table,
-		Value: make([]byte, 0),
 	}
 }
 
@@ -194,9 +191,14 @@ func (m Message) ToBytesBuffer() bytes.Buffer {
 	// if len(m.Value) > 4294967295 {
 	// 	return buf, errors.New("value size must be within 4MB")
 	// }
-	binary.LittleEndian.PutUint32(dataLen, uint32(len(m.Value)))
-
-	buf.Write(m.Value)
+	if m.Value != nil {
+		binary.LittleEndian.PutUint32(dataLen, uint32(len(m.Value)))
+		buf.Write(dataLen)
+		buf.Write(m.Value)
+	} else {
+		binary.LittleEndian.PutUint32(dataLen, 0)
+		buf.Write(dataLen)
+	}
 
 	return buf
 }
@@ -234,23 +236,27 @@ func MessageFromBytes(buf *bufio.Reader) (Message, error) {
 	if err != nil {
 		return msg, errors.Wrap(err, "unable to read message table length")
 	}
-	tableName := make([]byte, tableLen)
-	_, err = buf.Read(tableName)
-	if err != nil {
-		return msg, errors.Wrap(err, "unable to read table name")
+	if tableLen > 0 {
+		tableName := make([]byte, tableLen)
+		_, err = buf.Read(tableName)
+		if err != nil {
+			return msg, errors.Wrap(err, "unable to read table name")
+		}
+		msg.Table = string(tableName)
 	}
-	msg.Table = string(tableName)
 
 	keyLen, err := buf.ReadByte()
 	if err != nil {
 		return msg, errors.Wrap(err, "unable to read message key length")
 	}
-	key := make([]byte, keyLen)
-	_, err = buf.Read(key)
-	if err != nil {
-		return msg, errors.Wrap(err, "unable to read message key")
+	if keyLen > 0 {
+		key := make([]byte, keyLen)
+		_, err = buf.Read(key)
+		if err != nil {
+			return msg, errors.Wrap(err, "unable to read message key")
+		}
+		msg.Key = string(key)
 	}
-	msg.Key = string(key)
 
 	valueType, err := buf.ReadByte()
 	if err != nil {
@@ -264,9 +270,11 @@ func MessageFromBytes(buf *bufio.Reader) (Message, error) {
 		return msg, errors.Wrap(err, "unable to message value length")
 	}
 	valueLen := binary.LittleEndian.Uint32(valueLenBytes)
-	value := make([]byte, valueLen)
-	buf.Read(value)
-	msg.Value = value
+	if valueLen > 0 {
+		value := make([]byte, valueLen)
+		buf.Read(value)
+		msg.Value = value
+	}
 
 	return msg, nil
 }
