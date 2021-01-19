@@ -2,6 +2,7 @@ package sunduq
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"reflect"
 	"testing"
@@ -119,5 +120,34 @@ func TestAllMessageCombinators(t *testing.T) {
 	allMessages := generateAllPossibleMessageCombinations()
 	for _, msg := range allMessages {
 		serializeAndTest(msg, t)
+	}
+}
+
+func TestParsingMessagesInARow(t *testing.T) {
+	messages := generateAllPossibleMessageCombinations()
+	var buf = bytes.NewBuffer([]byte{})
+	for _, msg := range messages {
+		msgBuf := msg.ToBytesBuffer()
+		msgBuf.WriteTo(buf)
+	}
+	reader := bufio.NewReader(buf)
+	serializedMessages := make([]Message, len(messages))
+	lim := len(messages)
+	var i int
+	for i = 0; i < lim; i++ {
+		msg, err := MessageFromBytes(reader)
+		if err != nil {
+			if err.Error() == "EOF" {
+				break
+			}
+			t.Errorf("reading failed with non EOF error: %v", err)
+		}
+		serializedMessages[i] = msg
+	}
+	if len(messages) != len(serializedMessages) {
+		t.Errorf("did not match the amount of messages serialized, got: %v, expected: %v", len(messages), len(serializedMessages))
+	}
+	for i, msg := range messages {
+		assert(msg, serializedMessages[i], t)
 	}
 }
