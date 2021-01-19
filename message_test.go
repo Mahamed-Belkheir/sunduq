@@ -48,3 +48,18 @@ func TestConnectMessage(t *testing.T) {
 	assert(username, con2.Key, t)
 	assert(password, string(con2.Value), t)
 }
+
+func TestDisconnectMessage(t *testing.T) {
+	dsc := NewDisconnect()
+	serializeAndTest(dsc, t)
+}
+
+func TestMessage(t *testing.T) {
+	msg := NewMessage(Get, 1, "tuesday", "posts")
+	serializeAndTest(msg, t)
+}
+
+func TestMessageWithValue(t *testing.T) {
+	msg := NewMessageWithValue(Get, 1, "tuesday", "posts", String, []byte("some tuesday posts"))
+	serializeAndTest(msg, t)
+}
