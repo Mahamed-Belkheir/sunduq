@@ -85,12 +85,10 @@ func notFound() error {
 }
 
 //Set adds an element to the table
-func (t Table) Set(key string, value []byte) error {
+func (t Table) Set(key string, value []byte) {
 	t.mut.Lock()
 	defer t.mut.Unlock()
 	t.data[key] = value
-
-	return nil
 }
 
 //Get fetches the item from the table
@@ -107,12 +105,10 @@ func (t Table) Get(key string) ([]byte, error) {
 }
 
 //Del deletes the item from the table
-func (t Table) Del(key string) error {
+func (t Table) Del(key string) {
 	t.mut.Lock()
 	defer t.mut.Unlock()
 	delete(t.data, key)
-
-	return nil
 }
 
 //SetUser sets the user table access level

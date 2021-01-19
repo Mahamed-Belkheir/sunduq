@@ -116,12 +116,14 @@ func (q query) Exec() ([]byte, error) {
 		if q.value == nil {
 			return nil, errors.New("did not set a value for a Set query builder")
 		}
-		return nil, table.Set(q.key, q.value)
+		table.Set(q.key, q.value)
+		return nil, nil
 	case sunduq.Del:
 		if q.key == "" {
 			return nil, errors.New("did not set a key for a Delete query builder")
 		}
-		return nil, table.Del(q.key)
+		table.Del(q.key)
+		return nil, nil
 	case sunduq.CreateTable:
 		return nil, q.store.addTable(q.user, q.table, false)
 	case sunduq.DeleteTable:
