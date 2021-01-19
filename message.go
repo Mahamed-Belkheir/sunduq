@@ -27,20 +27,14 @@ const (
 	Set
 	//Del delete a value from a table
 	Del
-	//All get all values from a table
-	All
 	//CreateTable creates a new table
 	CreateTable
-	//GetTables fetches all table names
-	GetTables
 	//DeleteTable deletes a table
 	DeleteTable
 	//SetTableUser sets table's user access list values
 	SetTableUser
 	//DelTableUser removes a user from a table access list
 	DelTableUser
-	//AllTableUser fetches all users in the access list
-	AllTableUser
 )
 
 //ValueType the stored value type
