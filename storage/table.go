@@ -2,6 +2,7 @@ package storage
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 
 	"github.com/Mahamed-Belkheir/sunduq"
@@ -19,33 +20,38 @@ const (
 	Admin
 )
 
-//IsValid verifies the access level is a valid value within the enum values
-func (a AccessLevel) IsValid() error {
-	switch a {
-	case Read, Write, Admin:
-		return nil
-	default:
-		return errors.New("Invalid AccessLevel Value")
-	}
+func toAccessLevel(slice []byte) AccessLevel {
+	return AccessLevel(slice[0])
 }
 
 //AccessList is a map of all users with access to the table and their access level
 type AccessList map[string]AccessLevel
 
-func (a AccessList) canRead(user string) bool {
-	_, ok := a[user]
-	return ok
+var accessMap map[sunduq.MessageType]AccessLevel = map[sunduq.MessageType]AccessLevel{
+	sunduq.Get:          Read,
+	sunduq.Set:          Write,
+	sunduq.Del:          Write,
+	sunduq.DeleteTable:  Admin,
+	sunduq.SetTableUser: Admin,
+	sunduq.DelTableUser: Admin,
 }
 
-func (a AccessList) canWrite(user string) bool {
-	access, ok := a[user]
+func (t Table) verifyAccess(user string, command sunduq.MessageType) error {
+	if command == sunduq.CreateTable {
+		return nil
+	}
+	access, ok := t.ac[user]
 	if !ok {
-		return false
+		return fmt.Errorf("user %v does not have access to table %v", user, t.name)
 	}
-	if access == Write {
-		return true
+	requiredLevel, ok := accessMap[command]
+	if !ok {
+		return fmt.Errorf("recieved invalid command id: %v", command)
 	}
-	return false
+	if access < requiredLevel {
+		return fmt.Errorf("user %v lacks the required access level: %v", user, requiredLevel)
+	}
+	return nil
 }
 
 //Table is the basic building block for the storage, holds all the data and includes other meta data
@@ -78,26 +84,19 @@ func notFound() error {
 	return errors.New("Key not found")
 }
 
-//Add adds an element to the table
-func (t Table) Add(req sunduq.Request, key string, value []byte) error {
+//Set adds an element to the table
+func (t Table) Set(key string, value []byte) error {
 	t.mut.Lock()
 	defer t.mut.Unlock()
-	if !t.ac.canWrite(req.User) {
-		return invalidCreds()
-	}
-
 	t.data[key] = value
 
 	return nil
 }
 
 //Get fetches the item from the table
-func (t Table) Get(req sunduq.Request, key string) ([]byte, error) {
+func (t Table) Get(key string) ([]byte, error) {
 	t.mut.RLock()
 	defer t.mut.RUnlock()
-	if !t.ac.canRead(req.User) {
-		return nil, invalidCreds()
-	}
 
 	data, ok := t.data[key]
 	if !ok {
@@ -108,25 +107,24 @@ func (t Table) Get(req sunduq.Request, key string) ([]byte, error) {
 }
 
 //Del deletes the item from the table
-func (t Table) Del(req sunduq.Request, key string) error {
+func (t Table) Del(key string) error {
 	t.mut.Lock()
 	defer t.mut.Unlock()
-	if !t.ac.canWrite(req.User) {
-		return invalidCreds()
-	}
-
 	delete(t.data, key)
 
 	return nil
 }
 
-//All fetches all data in the table
-func (t Table) All(req sunduq.Request, key string) (map[string][]byte, error) {
-	t.mut.RLock()
-	defer t.mut.RUnlock()
-	if !t.ac.canRead(req.User) {
-		return nil, invalidCreds()
-	}
+//SetUser sets the user table access level
+func (t Table) SetUser(user string, access AccessLevel) {
+	t.mut.Lock()
+	defer t.mut.Unlock()
+	t.ac[user] = access
+}
 
-	return t.data, nil
+//DelUser deletes the user from the table access map
+func (t Table) DelUser(user string) {
+	t.mut.Lock()
+	defer t.mut.Unlock()
+	delete(t.ac, user)
 }
