@@ -2,6 +2,7 @@ package sunduq
 
 import (
 	"bufio"
+	"fmt"
 	"reflect"
 	"testing"
 )
@@ -62,4 +63,61 @@ func TestMessage(t *testing.T) {
 func TestMessageWithValue(t *testing.T) {
 	msg := NewMessageWithValue(Get, 1, "tuesday", "posts", String, []byte("some tuesday posts"))
 	serializeAndTest(msg, t)
+}
+
+var sliceOfTypes = []MessageType{
+	Ping,
+	Result,
+	Connect,
+	Disconnect,
+	Get,
+	Set,
+	Del,
+	All,
+	CreateTable,
+	GetTables,
+	DeleteTable,
+	SetTableUser,
+	DelTableUser,
+	AllTableUser,
+}
+var sliceOfValueTypes = []ValueType{
+	Boolean,
+	String,
+	Integer,
+	Float,
+	JSON,
+}
+
+func generateAllPossibleMessageCombinations() []Message {
+	var i uint16
+	i = 1
+	messages := make([]Message, 0)
+	for _, mType := range sliceOfTypes {
+		for _, vType := range sliceOfValueTypes {
+			isErr := false
+			if i%2 == 0 {
+				isErr = true
+			}
+			msg := Message{
+				Error:     isErr,
+				ID:        i,
+				Key:       "msgKey " + fmt.Sprint(i),
+				Table:     "some table",
+				Type:      mType,
+				ValueType: vType,
+				Value:     []byte("message id is: " + fmt.Sprint(i)),
+			}
+			i++
+			messages = append(messages, msg)
+		}
+	}
+	return messages
+}
+
+func TestAllMessageCombinators(t *testing.T) {
+	allMessages := generateAllPossibleMessageCombinations()
+	for _, msg := range allMessages {
+		serializeAndTest(msg, t)
+	}
 }
