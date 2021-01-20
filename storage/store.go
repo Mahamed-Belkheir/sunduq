@@ -22,6 +22,14 @@ type Storage struct {
 	mut    *sync.RWMutex
 }
 
+//NewStorage creates a new storage instance
+func NewStorage() Storage {
+	return Storage{
+		make(map[string]Table, 0),
+		&sync.RWMutex{},
+	}
+}
+
 func (s Storage) addTable(user, tableName string, isSystemTable bool) error {
 	defer s.mut.Unlock()
 	s.mut.Lock()
@@ -48,7 +56,15 @@ func (s Storage) delTable(tableName string) error {
 	return nil
 }
 
-type query struct {
+//Query returns a new query instance, can be chained to make a query to the storage
+func (s Storage) Query() QueryBuilder {
+	q := QueryBuilder{}
+	q.store = s
+	return q
+}
+
+//QueryBuilder exposes a fluent API to make queries to the storage tables
+type QueryBuilder struct {
 	store   Storage
 	user    string
 	table   string
@@ -57,33 +73,39 @@ type query struct {
 	value   []byte
 }
 
-func (q query) Table(table string) query {
+//Table sets the query target table
+func (q QueryBuilder) Table(table string) QueryBuilder {
 	q.table = table
 	return q
 }
 
-func (q query) User(user string) query {
+//User sets the user making the query, for authorization and not part of the query
+func (q QueryBuilder) User(user string) QueryBuilder {
 	q.user = user
 	return q
 }
 
-func (q query) Command(command sunduq.MessageType) query {
+//Command sets the type of operation the querybuilder is making
+func (q QueryBuilder) Command(command sunduq.MessageType) QueryBuilder {
 	q.command = command
 	return q
 }
 
-func (q query) Key(key string) query {
+//Key sets the query's target key
+func (q QueryBuilder) Key(key string) QueryBuilder {
 	q.key = key
 
 	return q
 }
 
-func (q query) Value(value []byte) query {
+//Value sets the query's Value, for Set* methods
+func (q QueryBuilder) Value(value []byte) QueryBuilder {
 	q.value = value
 	return q
 }
 
-func (q query) Exec() ([]byte, error) {
+//Exec executes the query, returns a byte slice if it was a Get* request, and an error
+func (q QueryBuilder) Exec() ([]byte, error) {
 	if q.table == "" {
 		return nil, errors.New("did not select a table for the query builder")
 	}
