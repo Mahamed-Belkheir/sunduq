@@ -50,7 +50,6 @@ func (h Connection) Errors() chan error {
 func (h Connection) Close() {
 	h.conn.Close()
 	close(h.sendQueue)
-	h.close <- true
 	close(h.close)
 }
 
@@ -72,12 +71,6 @@ func (h Connection) Run() error {
 	}()
 	go func() {
 		buf := bufio.NewReader(h.conn)
-		auth, err := sunduq.MessageFromBytes(buf)
-		if err != nil {
-			h.errorQueue <- err
-		}
-		// authorize
-		_ = auth
 		for {
 			select {
 			case <-h.close:
@@ -85,7 +78,9 @@ func (h Connection) Run() error {
 				return
 			default:
 				msg, err := sunduq.MessageFromBytes(buf)
-				_ = err
+				if err != nil {
+					h.errorQueue <- err
+				}
 				h.recieveQueue <- msg
 			}
 		}
