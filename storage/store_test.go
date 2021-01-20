@@ -25,10 +25,9 @@ func TestStorageQuery(t *testing.T) {
 	s.addTable(user, table, false)
 
 	_, err := s.
-		Query().
+		Query(sunduq.Set).
 		Table(table).
 		User(user).
-		Command(sunduq.Set).
 		Key(key).
 		Value(value).
 		Exec()
@@ -36,10 +35,9 @@ func TestStorageQuery(t *testing.T) {
 	ok(err, t)
 
 	data, err := s.
-		Query().
+		Query(sunduq.Get).
 		Table(table).
 		User(user).
-		Command(sunduq.Get).
 		Key(key).
 		Exec()
 
@@ -47,20 +45,18 @@ func TestStorageQuery(t *testing.T) {
 	assert(value, data, t)
 
 	_, err = s.
-		Query().
+		Query(sunduq.Del).
 		Table(table).
 		User(user).
-		Command(sunduq.Del).
 		Key(key).
 		Exec()
 
 	ok(err, t)
 
 	data, err = s.
-		Query().
+		Query(sunduq.Get).
 		Table(table).
 		User(user).
-		Command(sunduq.Get).
 		Key(key).
 		Exec()
 

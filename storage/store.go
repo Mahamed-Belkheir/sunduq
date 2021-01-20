@@ -57,9 +57,10 @@ func (s Storage) delTable(tableName string) error {
 }
 
 //Query returns a new query instance, can be chained to make a query to the storage
-func (s Storage) Query() QueryBuilder {
+func (s Storage) Query(query sunduq.MessageType) QueryBuilder {
 	q := QueryBuilder{}
 	q.store = s
+	q.command = query
 	return q
 }
 
@@ -82,12 +83,6 @@ func (q QueryBuilder) Table(table string) QueryBuilder {
 //User sets the user making the query, for authorization and not part of the query
 func (q QueryBuilder) User(user string) QueryBuilder {
 	q.user = user
-	return q
-}
-
-//Command sets the type of operation the querybuilder is making
-func (q QueryBuilder) Command(command sunduq.MessageType) QueryBuilder {
-	q.command = command
 	return q
 }
 
