@@ -74,13 +74,10 @@ var sliceOfTypes = []MessageType{
 	Get,
 	Set,
 	Del,
-	All,
 	CreateTable,
-	GetTables,
 	DeleteTable,
 	SetTableUser,
 	DelTableUser,
-	AllTableUser,
 }
 var sliceOfValueTypes = []ValueType{
 	Boolean,
