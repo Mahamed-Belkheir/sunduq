@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 )
@@ -39,4 +40,60 @@ func TestTableCRUD(t *testing.T) {
 	table.Del("hello")
 	_, err = table.Get("hello")
 	assert(err, notFound(), t)
+}
+
+func TestAdminTableAccess(t *testing.T) {
+	tableName, user := "table1", "bob"
+	table := NewTable(tableName, user, false)
+
+	for command := range accessMap {
+		err := table.verifyAccess(user, command)
+		ok(err, t)
+	}
+}
+
+func TestWriteTableAccess(t *testing.T) {
+	tableName, user := "table1", "bob"
+	table := NewTable(tableName, user, false)
+
+	newUser := "adam"
+
+	table.SetUser(newUser, Write)
+	for command, level := range accessMap {
+		err := table.verifyAccess(newUser, command)
+		if level == Admin {
+			assert(fmt.Errorf("user %v lacks the required access level: %v", newUser, level), err, t)
+			continue
+		}
+		ok(err, t)
+	}
+}
+
+func TestReadTableAccess(t *testing.T) {
+	tableName, user := "table1", "bob"
+	table := NewTable(tableName, user, false)
+
+	newUser := "adam"
+
+	table.SetUser(newUser, Read)
+	for command, level := range accessMap {
+		err := table.verifyAccess(newUser, command)
+		if level == Read {
+			ok(err, t)
+			continue
+		}
+		assert(fmt.Errorf("user %v lacks the required access level: %v", newUser, level), err, t)
+	}
+}
+
+func TestNoTableAccess(t *testing.T) {
+	tableName, user := "table1", "bob"
+	table := NewTable(tableName, user, false)
+
+	newUser := "john"
+
+	for command := range accessMap {
+		err := table.verifyAccess(newUser, command)
+		assert(fmt.Errorf("user %v does not have access to table %v", newUser, tableName), err, t)
+	}
 }
