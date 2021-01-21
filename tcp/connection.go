@@ -49,8 +49,9 @@ func (h Connection) Errors() chan error {
 //Close closes the connection and ends all associated tasks
 func (h Connection) Close() {
 	h.conn.Close()
-	close(h.sendQueue)
 	close(h.close)
+	close(h.sendQueue)
+	close(h.errorQueue)
 }
 
 //Run runs the Connection to listen for new messages to recieve and send
@@ -66,7 +67,10 @@ func (h Connection) Run() error {
 				return
 			}
 			data := msg.ToBytesBuffer()
-			io.Copy(h.conn, &data)
+			_, err := io.Copy(h.conn, &data)
+			if err != nil {
+				h.errorQueue <- err
+			}
 		}
 	}()
 	go func() {
