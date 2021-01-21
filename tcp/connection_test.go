@@ -19,14 +19,13 @@ func TestConnection(t *testing.T) {
 	server, client := NewConnection(serverConn), NewConnection(clientConn)
 	server.Run()
 	client.Run()
-	go func() {
-		defer client.Close()
-		msg := sunduq.NewPing(1)
-		client.Send(msg)
-	}()
+	msg := sunduq.NewPing(1)
+	client.Send(msg)
 
 	ch := server.Recieve()
-	msg := <-ch
+	msg2 := <-ch
+
+	assert(msg, msg2, t)
+	client.Close()
 	server.Close()
-	assert(msg, sunduq.NewPing(1), t)
 }

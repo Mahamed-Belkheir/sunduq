@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"net"
+	"sync"
 
 	"github.com/Mahamed-Belkheir/sunduq"
 )
@@ -17,18 +18,22 @@ type Connection struct {
 	errorQueue   chan error
 	close        chan bool
 	running      bool
+	wg           *sync.WaitGroup
 }
 
 //NewConnection wraps the tcp connection with the Connection abstraction struct
 func NewConnection(conn net.Conn) Connection {
-	return Connection{
+	c := Connection{
 		conn,
-		make(chan sunduq.Message),
-		make(chan sunduq.Message),
-		make(chan error),
+		make(chan sunduq.Message, 5),
+		make(chan sunduq.Message, 5),
+		make(chan error, 5),
 		make(chan bool),
 		false,
+		&sync.WaitGroup{},
 	}
+	c.wg.Add(2)
+	return c
 }
 
 //Recieve returns the recieved messages queue
@@ -51,6 +56,7 @@ func (h Connection) Close() {
 	h.conn.Close()
 	close(h.close)
 	close(h.sendQueue)
+	h.wg.Wait()
 	close(h.errorQueue)
 }
 
@@ -61,19 +67,26 @@ func (h Connection) Run() error {
 	}
 	h.running = true
 	go func() {
+		defer h.wg.Done()
 		for {
-			msg, ok := <-h.sendQueue
-			if !ok {
+			select {
+			case <-h.close:
 				return
-			}
-			data := msg.ToBytesBuffer()
-			_, err := io.Copy(h.conn, &data)
-			if err != nil {
-				h.errorQueue <- err
+			default:
+				msg, ok := <-h.sendQueue
+				if !ok {
+					return
+				}
+				data := msg.ToBytesBuffer()
+				_, err := io.Copy(h.conn, &data)
+				if err != nil {
+					h.errorQueue <- err
+				}
 			}
 		}
 	}()
 	go func() {
+		defer h.wg.Done()
 		buf := bufio.NewReader(h.conn)
 		for {
 			select {
@@ -84,8 +97,9 @@ func (h Connection) Run() error {
 				msg, err := sunduq.MessageFromBytes(buf)
 				if err != nil {
 					h.errorQueue <- err
+				} else {
+					h.recieveQueue <- msg
 				}
-				h.recieveQueue <- msg
 			}
 		}
 	}()
