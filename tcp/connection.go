@@ -97,6 +97,10 @@ func (h Connection) Run() error {
 				msg, err := sunduq.MessageFromBytes(buf)
 				if err != nil {
 					h.errorQueue <- err
+					if errors.Unwrap(err).Error() == "EOF" {
+						close(h.recieveQueue)
+						return
+					}
 				} else {
 					h.recieveQueue <- msg
 				}
