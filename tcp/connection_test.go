@@ -2,7 +2,6 @@ package tcp
 
 import (
 	"errors"
-	"fmt"
 	"net"
 	"reflect"
 	"sync"
@@ -82,22 +81,17 @@ func TestContinousMessaging(t *testing.T) {
 		for {
 			select {
 			case msg := <-msgChan:
-				fmt.Println("got message")
 				recievedMsgs = append(recievedMsgs, msg)
 				wg.Done()
 			case err := <-errChan:
-				fmt.Println("got error")
 				errRecieved <- err
 				return
 			}
 		}
 	}()
-	fmt.Println("waiting")
 	wg.Wait()
-	fmt.Println("waiting for err")
 	client.Close()
 	err := <-errRecieved
-	fmt.Println("after error")
 	server.Close()
 	assert(errors.New("EOF"), errors.Unwrap(err), t)
 	for i := range recievedMsgs {
