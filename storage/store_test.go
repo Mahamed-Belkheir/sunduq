@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/Mahamed-Belkheir/sunduq"
@@ -61,5 +62,38 @@ func TestStorageQuery(t *testing.T) {
 		Exec()
 
 	assert(notFound(), err, t)
+
+}
+
+func TestStorageTableQuery(t *testing.T) {
+	s := NewStorage()
+	user, table := "userOne", "tableOne"
+
+	_, err := s.Query(sunduq.CreateTable).Table(table).User(user).Exec()
+	ok(err, t)
+
+	assert(NewTable(table, user, false), s.tables[table], t)
+
+	newUser := "userTwo"
+	_, err = s.Query(sunduq.SetTableUser).Table(table).User(user).Key(newUser).Value([]byte{uint8(Write)}).Exec()
+	ok(err, t)
+
+	_, err = s.Query(sunduq.Set).Table(table).User(newUser).Key("key").Value([]byte("hello world")).Exec()
+	ok(err, t)
+
+	_, err = s.Query(sunduq.SetTableUser).Table(table).User(newUser).Key(newUser).Value([]byte{uint8(Admin)}).Exec()
+	assert(fmt.Errorf("user %v lacks the required access level: %v", newUser, Admin), err, t)
+
+	_, err = s.Query(sunduq.DelTableUser).Table(table).User(user).Key(newUser).Exec()
+	ok(err, t)
+
+	_, err = s.Query(sunduq.Get).Table(table).User(newUser).Key("key").Exec()
+	assert(fmt.Errorf("user %v does not have access to table %v", newUser, table), err, t)
+
+	_, err = s.Query(sunduq.DeleteTable).Table(table).User(user).Exec()
+	ok(err, t)
+
+	_, err = s.Query(sunduq.Set).Table(table).User(user).Key("key").Value([]byte("hello world")).Exec()
+	assert(fmt.Errorf("table %v not found", table), err, t)
 
 }

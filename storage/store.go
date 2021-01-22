@@ -111,6 +111,10 @@ func (q QueryBuilder) Exec() ([]byte, error) {
 		return nil, errors.New("did not select a command for the query builder")
 	}
 
+	if q.command == sunduq.CreateTable {
+		return nil, q.store.addTable(q.user, q.table, false)
+	}
+
 	q.store.mut.RLock()
 	table, ok := q.store.tables[q.table]
 	q.store.mut.RUnlock()
@@ -141,8 +145,6 @@ func (q QueryBuilder) Exec() ([]byte, error) {
 		}
 		table.Del(q.key)
 		return nil, nil
-	case sunduq.CreateTable:
-		return nil, q.store.addTable(q.user, q.table, false)
 	case sunduq.DeleteTable:
 		return nil, q.store.delTable(q.table)
 	case sunduq.SetTableUser:
