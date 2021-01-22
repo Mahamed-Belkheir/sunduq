@@ -5,8 +5,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-
-	"github.com/pkg/errors"
 )
 
 //MessageType defines the message's type
@@ -203,13 +201,13 @@ func MessageFromBytes(buf *bufio.Reader) (Message, error) {
 
 	typeByte, err := buf.ReadByte()
 	if err != nil {
-		return msg, errors.Wrap(err, "unable to read message type")
+		return msg, fmt.Errorf("unable to read message type: %w", err)
 	}
 	msg.Type = MessageType(typeByte)
 
 	errorByte, err := buf.ReadByte()
 	if err != nil {
-		return msg, errors.Wrap(err, "unable to read message status")
+		return msg, fmt.Errorf("unable to read message status: %w", err)
 	}
 	if errorByte == 0 {
 		msg.Error = false
@@ -222,46 +220,46 @@ func MessageFromBytes(buf *bufio.Reader) (Message, error) {
 	idBytes := make([]byte, 2)
 	_, err = buf.Read(idBytes)
 	if err != nil {
-		return msg, errors.Wrap(err, "unable to read message id")
+		return msg, fmt.Errorf("unable to read message id: %w", err)
 	}
 	msg.ID = binary.LittleEndian.Uint16(idBytes)
 
 	tableLen, err := buf.ReadByte()
 	if err != nil {
-		return msg, errors.Wrap(err, "unable to read message table length")
+		return msg, fmt.Errorf("unable to read message table length: %w", err)
 	}
 	if tableLen > 0 {
 		tableName := make([]byte, tableLen)
 		_, err = buf.Read(tableName)
 		if err != nil {
-			return msg, errors.Wrap(err, "unable to read table name")
+			return msg, fmt.Errorf("unable to read table name: %w", err)
 		}
 		msg.Table = string(tableName)
 	}
 
 	keyLen, err := buf.ReadByte()
 	if err != nil {
-		return msg, errors.Wrap(err, "unable to read message key length")
+		return msg, fmt.Errorf("unable to read message key length: %w", err)
 	}
 	if keyLen > 0 {
 		key := make([]byte, keyLen)
 		_, err = buf.Read(key)
 		if err != nil {
-			return msg, errors.Wrap(err, "unable to read message key")
+			return msg, fmt.Errorf("unable to read message key: %w", err)
 		}
 		msg.Key = string(key)
 	}
 
 	valueType, err := buf.ReadByte()
 	if err != nil {
-		return msg, errors.Wrap(err, "unable to read message value type")
+		return msg, fmt.Errorf("unable to read message value type: %w", err)
 	}
 	msg.ValueType = ValueType(valueType)
 
 	valueLenBytes := make([]byte, 4)
 	_, err = buf.Read(valueLenBytes)
 	if err != nil {
-		return msg, errors.Wrap(err, "unable to message value length")
+		return msg, fmt.Errorf("unable to message value length: %w", err)
 	}
 	valueLen := binary.LittleEndian.Uint32(valueLenBytes)
 	if valueLen > 0 {
