@@ -3,6 +3,7 @@ package server
 import (
 	"sync"
 	"testing"
+	"time"
 )
 
 func TestPoolCreation(t *testing.T) {
@@ -35,5 +36,6 @@ func newHandler(wait int) mockHandler {
 }
 
 func (m mockHandler) Run() {
+	time.Sleep(10)
 	m.wg.Done()
 }
