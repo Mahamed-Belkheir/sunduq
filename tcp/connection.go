@@ -81,6 +81,9 @@ func (h Connection) Run() error {
 				_, err := io.Copy(h.conn, &data)
 				if err != nil {
 					h.errorQueue <- err
+					if errors.Unwrap(err).Error() == "EOF" {
+						return
+					}
 				}
 			}
 		}
