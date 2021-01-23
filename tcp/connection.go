@@ -13,8 +13,8 @@ import (
 //Connection is an abstraction to the TCP Connection, handles serializing and sending, and recieving and parsing messages
 type Connection struct {
 	conn         net.Conn
-	sendQueue    chan sunduq.Message
-	recieveQueue chan sunduq.Message
+	SendQueue    chan sunduq.Message
+	RecieveQueue chan sunduq.Message
 	errorQueue   chan error
 	close        chan bool
 	running      bool
@@ -38,12 +38,12 @@ func NewConnection(conn net.Conn) Connection {
 
 //Recieve returns the recieved messages queue
 func (h Connection) Recieve() chan sunduq.Message {
-	return h.recieveQueue
+	return h.RecieveQueue
 }
 
 //Send adds the message to the send queue to be sent over the connection by the Connection
 func (h Connection) Send(msg sunduq.Message) {
-	h.sendQueue <- msg
+	h.SendQueue <- msg
 }
 
 //Errors returns the errors channel, errors recieved while the connection is processing messages
@@ -55,7 +55,7 @@ func (h Connection) Errors() chan error {
 func (h Connection) Close() {
 	h.conn.Close()
 	close(h.close)
-	close(h.sendQueue)
+	close(h.SendQueue)
 	h.wg.Wait()
 	close(h.errorQueue)
 }
@@ -73,7 +73,7 @@ func (h Connection) Run() error {
 			case <-h.close:
 				return
 			default:
-				msg, ok := <-h.sendQueue
+				msg, ok := <-h.SendQueue
 				if !ok {
 					return
 				}
@@ -94,18 +94,18 @@ func (h Connection) Run() error {
 		for {
 			select {
 			case <-h.close:
-				close(h.recieveQueue)
+				close(h.RecieveQueue)
 				return
 			default:
 				msg, err := sunduq.MessageFromBytes(buf)
 				if err != nil {
 					h.errorQueue <- err
 					if errors.Unwrap(err).Error() == "EOF" {
-						close(h.recieveQueue)
+						close(h.RecieveQueue)
 						return
 					}
 				} else {
-					h.recieveQueue <- msg
+					h.RecieveQueue <- msg
 				}
 			}
 		}
