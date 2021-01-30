@@ -8,6 +8,9 @@ import (
 	"github.com/Mahamed-Belkheir/sunduq"
 )
 
+//SystemUsersTable is the default users table
+const SystemUsersTable string = "$_system_user_table"
+
 func tableExists() error {
 	return errors.New("Table already exists")
 }
@@ -71,7 +74,7 @@ type QueryBuilder struct {
 	table   string
 	command sunduq.MessageType
 	key     string
-	value   []byte
+	value   Value
 }
 
 //Table sets the query target table
@@ -94,13 +97,13 @@ func (q QueryBuilder) Key(key string) QueryBuilder {
 }
 
 //Value sets the query's Value, for Set* methods
-func (q QueryBuilder) Value(value []byte) QueryBuilder {
+func (q QueryBuilder) Value(value Value) QueryBuilder {
 	q.value = value
 	return q
 }
 
 //Exec executes the query, returns a byte slice if it was a Get* request, and an error
-func (q QueryBuilder) Exec() ([]byte, error) {
+func (q QueryBuilder) Exec() (*Value, error) {
 	if q.table == "" {
 		return nil, errors.New("did not select a table for the query builder")
 	}
@@ -134,9 +137,6 @@ func (q QueryBuilder) Exec() ([]byte, error) {
 		if q.key == "" {
 			return nil, errors.New("did not set a key for a Get query builder")
 		}
-		if q.value == nil {
-			return nil, errors.New("did not set a value for a Set query builder")
-		}
 		table.Set(q.key, q.value)
 		return nil, nil
 	case sunduq.Del:
@@ -151,10 +151,7 @@ func (q QueryBuilder) Exec() ([]byte, error) {
 		if q.key == "" {
 			return nil, errors.New("did not set a key for a Get query builder")
 		}
-		if q.value == nil {
-			return nil, errors.New("did not set a value for a Set query builder")
-		}
-		table.SetUser(q.key, toAccessLevel(q.value))
+		table.SetUser(q.key, toAccessLevel(q.value.Data))
 		return nil, nil
 	case sunduq.DelTableUser:
 		if q.key == "" {

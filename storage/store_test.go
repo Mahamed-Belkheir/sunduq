@@ -22,7 +22,7 @@ func TestStorageAddTable(t *testing.T) {
 
 func TestStorageQuery(t *testing.T) {
 	s := NewStorage()
-	user, table, key, value := "userOne", "tableOne", "key1", []byte("hello world")
+	user, table, key, value := "userOne", "tableOne", "key1", Value{sunduq.String, []byte("hello world")}
 	s.addTable(user, table, false)
 
 	_, err := s.
@@ -43,7 +43,7 @@ func TestStorageQuery(t *testing.T) {
 		Exec()
 
 	ok(err, t)
-	assert(value, data, t)
+	assert(value, *data, t)
 
 	_, err = s.
 		Query(sunduq.Del).
@@ -75,13 +75,13 @@ func TestStorageTableQuery(t *testing.T) {
 	assert(NewTable(table, user, false), s.tables[table], t)
 
 	newUser := "userTwo"
-	_, err = s.Query(sunduq.SetTableUser).Table(table).User(user).Key(newUser).Value([]byte{uint8(Write)}).Exec()
+	_, err = s.Query(sunduq.SetTableUser).Table(table).User(user).Key(newUser).Value(Value{sunduq.Blob, []byte{uint8(Write)}}).Exec()
 	ok(err, t)
 
-	_, err = s.Query(sunduq.Set).Table(table).User(newUser).Key("key").Value([]byte("hello world")).Exec()
+	_, err = s.Query(sunduq.Set).Table(table).User(newUser).Key("key").Value(Value{sunduq.String, []byte("hello world")}).Exec()
 	ok(err, t)
 
-	_, err = s.Query(sunduq.SetTableUser).Table(table).User(newUser).Key(newUser).Value([]byte{uint8(Admin)}).Exec()
+	_, err = s.Query(sunduq.SetTableUser).Table(table).User(newUser).Key(newUser).Value(Value{sunduq.Blob, []byte{uint8(Admin)}}).Exec()
 	assert(fmt.Errorf("user %v lacks the required access level: %v", newUser, Admin), err, t)
 
 	_, err = s.Query(sunduq.DelTableUser).Table(table).User(user).Key(newUser).Exec()
@@ -93,7 +93,7 @@ func TestStorageTableQuery(t *testing.T) {
 	_, err = s.Query(sunduq.DeleteTable).Table(table).User(user).Exec()
 	ok(err, t)
 
-	_, err = s.Query(sunduq.Set).Table(table).User(user).Key("key").Value([]byte("hello world")).Exec()
+	_, err = s.Query(sunduq.Set).Table(table).User(user).Key("key").Value(Value{sunduq.String, []byte("hello world")}).Exec()
 	assert(fmt.Errorf("table %v not found", table), err, t)
 
 }

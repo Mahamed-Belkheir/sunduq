@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"reflect"
 	"testing"
+
+	"github.com/Mahamed-Belkheir/sunduq"
 )
 
 func assert(expected, got interface{}, t *testing.T) {
@@ -25,18 +27,21 @@ func TestCanCreateTable(t *testing.T) {
 	assert(table.ac, AccessList{
 		user: Admin,
 	}, t)
-	assert(table.data, map[string][]byte{}, t)
+	assert(table.data, map[string]Value{}, t)
 }
 
 func TestTableCRUD(t *testing.T) {
 	tableName, user := "table1", "bob"
 	table := NewTable(tableName, user, false)
 
-	value := []byte("world")
+	value := Value{
+		sunduq.String,
+		[]byte("world"),
+	}
 	table.Set("hello", value)
 	result, err := table.Get("hello")
 	ok(err, t)
-	assert(result, value, t)
+	assert(*result, value, t)
 	table.Del("hello")
 	_, err = table.Get("hello")
 	assert(err, notFound(), t)

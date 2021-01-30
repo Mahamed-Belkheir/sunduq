@@ -54,10 +54,16 @@ func (t Table) verifyAccess(user string, command sunduq.MessageType) error {
 	return nil
 }
 
+//Value holds the data and data type
+type Value struct {
+	Type sunduq.ValueType
+	Data []byte
+}
+
 //Table is the basic building block for the storage, holds all the data and includes other meta data
 type Table struct {
 	ac            AccessList
-	data          map[string][]byte
+	data          map[string]Value
 	isSystemTable bool
 	name          string
 	mut           *sync.RWMutex
@@ -69,7 +75,7 @@ func NewTable(name, owner string, isSystemTable bool) Table {
 	ac[owner] = Admin
 	return Table{
 		ac,
-		make(map[string][]byte),
+		make(map[string]Value),
 		isSystemTable,
 		name,
 		&sync.RWMutex{},
@@ -85,14 +91,14 @@ func notFound() error {
 }
 
 //Set adds an element to the table
-func (t Table) Set(key string, value []byte) {
+func (t Table) Set(key string, value Value) {
 	t.mut.Lock()
 	defer t.mut.Unlock()
 	t.data[key] = value
 }
 
 //Get fetches the item from the table
-func (t Table) Get(key string) ([]byte, error) {
+func (t Table) Get(key string) (*Value, error) {
 	t.mut.RLock()
 	defer t.mut.RUnlock()
 
@@ -101,7 +107,7 @@ func (t Table) Get(key string) ([]byte, error) {
 		return nil, notFound()
 	}
 
-	return data, nil
+	return &data, nil
 }
 
 //Del deletes the item from the table
