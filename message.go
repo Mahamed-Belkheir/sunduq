@@ -49,6 +49,8 @@ const (
 	Float
 	//JSON ...
 	JSON
+	//Blob binary data
+	Blob
 )
 
 /*

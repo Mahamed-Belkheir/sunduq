@@ -9,12 +9,14 @@ type Handler interface {
 type Envelope struct {
 	ID      int
 	Message Message
+	User    string
 }
 
 //NewEnvelope creates a new envelope struct
-func NewEnvelope(id int, msg Message) Envelope {
+func NewEnvelope(id int, msg Message, user string) Envelope {
 	return Envelope{
 		id,
 		msg,
+		user,
 	}
 }
