@@ -69,21 +69,16 @@ func (h Connection) Run() error {
 	go func() {
 		defer h.wg.Done()
 		for {
-			select {
-			case <-h.close:
+			msg, ok := <-h.SendQueue
+			if !ok {
 				return
-			default:
-				msg, ok := <-h.SendQueue
-				if !ok {
+			}
+			data := msg.ToBytesBuffer()
+			_, err := io.Copy(h.conn, &data)
+			if err != nil {
+				h.errorQueue <- err
+				if errors.Unwrap(err).Error() == "EOF" {
 					return
-				}
-				data := msg.ToBytesBuffer()
-				_, err := io.Copy(h.conn, &data)
-				if err != nil {
-					h.errorQueue <- err
-					if errors.Unwrap(err).Error() == "EOF" {
-						return
-					}
 				}
 			}
 		}
