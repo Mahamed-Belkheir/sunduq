@@ -85,12 +85,13 @@ var sliceOfValueTypes = []ValueType{
 	Integer,
 	Float,
 	JSON,
+	Blob,
 }
 
 func generateAllPossibleMessageCombinations() []Message {
 	var i uint16
 	i = 1
-	messages := make([]Message, 0)
+	messages := make([]Message, len(sliceOfTypes)*len(sliceOfValueTypes))
 	for _, mType := range sliceOfTypes {
 		for _, vType := range sliceOfValueTypes {
 			isErr := false
@@ -106,8 +107,8 @@ func generateAllPossibleMessageCombinations() []Message {
 				ValueType: vType,
 				Value:     []byte("message id is: " + fmt.Sprint(i)),
 			}
+			messages[i-1] = msg
 			i++
-			messages = append(messages, msg)
 		}
 	}
 	return messages
