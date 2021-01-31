@@ -4,8 +4,18 @@ import "github.com/Mahamed-Belkheir/sunduq"
 
 //Manager handles all messaging events, and message middleware, connections and controllers register here
 type Manager struct {
-	index          handlerIndex
+	index          *handlerIndex
 	recieveHandler func(sunduq.Envelope)
+}
+
+//NewManager creates a new manager instance
+func NewManager() Manager {
+	return Manager{
+		newHandlerIndex(),
+		func(e sunduq.Envelope) {
+			panic("no recieve handler is registered")
+		},
+	}
 }
 
 //RegisterConnection registers the connection to send the response to
@@ -29,6 +39,6 @@ func (e Manager) Send(envelope sunduq.Envelope) {
 }
 
 //RecieveHandler registers the function to manage recieved messages
-func (e Manager) RecieveHandler(handler func(sunduq.Envelope)) {
+func (e *Manager) RecieveHandler(handler func(sunduq.Envelope)) {
 	e.recieveHandler = handler
 }

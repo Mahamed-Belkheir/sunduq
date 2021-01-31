@@ -11,6 +11,13 @@ type handlerIndex struct {
 	mut        *sync.RWMutex
 }
 
+func newHandlerIndex() *handlerIndex {
+	return &handlerIndex{
+		make(map[int]chan sunduq.Message),
+		&sync.RWMutex{},
+	}
+}
+
 func (h handlerIndex) send(envelope sunduq.Envelope) {
 	h.mut.RLock()
 	defer h.mut.RUnlock()
